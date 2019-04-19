@@ -1,6 +1,7 @@
 library(shiny)
 require(ggplot2)
 require(dplyr)
+require(leaflet)
 
 # read in data
 load(file = "subdat.rda")
@@ -18,7 +19,8 @@ ui <- fluidPage(
   mainPanel(
     tabsetPanel(
       tabPanel("Total Sales", plotOutput(outputId = "sales")),
-      tabPanel("Sales by City", plotOutput(outputId = "cities"))
+      tabPanel("Sales by City", plotOutput(outputId = "cities")),
+      tabPanel("Spatial plot", leaflet::leafletOutput("map"))
       )
     )
   )
@@ -47,6 +49,17 @@ server <- function(input, output){
       geom_line()+
       theme_bw()+
       ggtitle(paste("Total alochol sales by city in Story Count in", input$Year))
+  })
+  city_year <- reactive({
+    subdat %>%
+      filter(Year == input$Year) %>% 
+      group_by(StoreName, Lon, Lat) %>% 
+      summarise(income = sum(SaleDollars))
+  })
+  output$map <- leaflet::renderLeaflet({
+    leaflet::leaflet(data = city_year()) %>% leaflet::addTiles() %>%
+      leaflet::addCircleMarkers(~Lon, ~Lat, label = ~ StoreName,
+                                clusterOptions = markerClusterOptions())
   })
 }
 
