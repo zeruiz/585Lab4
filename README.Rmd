@@ -14,6 +14,7 @@ library(tidyverse)
 
 url <- "https://data.iowa.gov/resource/m3tr-qhgy.json?county=STORY"
 story_ex <- tibble::as_tibble(fromJSON(url)) # now it's a table ready for cleaning
+story_df <- data.frame(fromJSON(url)) # another option : save as dataframe 
 
 ```
 
