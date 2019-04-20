@@ -51,13 +51,15 @@ subdat <- dat %>%
 save(subdat, file = "shiny/subdat.rda")
 ```
 
-### 3. Wrking with Shiny : temporal and Spatial (by zeruiz)
+### 3. Wrking with Shiny 
 
 ```{r}
 library(shiny)
 require(ggplot2)
 require(dplyr)
 require(leaflet)
+require(plotly)
+
 
 # read in data
 load(file = "subdat.rda")
@@ -76,7 +78,8 @@ ui <- fluidPage(
     tabsetPanel(
       tabPanel("Total Sales", plotOutput(outputId = "sales")),
       tabPanel("Sales by City", plotOutput(outputId = "cities")),
-      tabPanel("Spatial plot", leaflet::leafletOutput("map"))
+      tabPanel("Store Location", leafletOutput("map1")),
+      tabPanel("Store Income heat map", plotlyOutput("map2"))
       )
     )
   )
@@ -112,10 +115,16 @@ server <- function(input, output){
       group_by(StoreName, Lon, Lat) %>% 
       summarise(income = sum(SaleDollars))
   })
-  output$map <- leaflet::renderLeaflet({
-    leaflet::leaflet(data = city_year()) %>% leaflet::addTiles() %>%
-      leaflet::addCircleMarkers(~Lon, ~Lat, label = ~ StoreName,
+  output$map1 <- renderLeaflet({
+    leaflet(data = city_year()) %>% 
+      addTiles() %>%
+      addCircleMarkers(~Lon, ~Lat, label = ~ StoreName,
                                 clusterOptions = markerClusterOptions())
+  })
+  output$map2 <- renderPlotly({
+    p <- ggplot(data = city_year(), aes(x = Lon, y = Lat, colour = income, size=StoreName)) + 
+      geom_point()+theme_bw()+theme(legend.position=c(0.8, 0.8))
+    ggplotly(p)
   })
 }
 
@@ -123,51 +132,8 @@ shinyApp(ui, server)
 
 ```
 
-### 3. Wrking with Shiny : temporal plot of alcohol consumption based on year and city (by zahra)
+### 3. Wrking with Shiny : plot of alcohol consumption in a specific year across Story County + in specific city from 2012 to 2019(another version)
 
-#### cleaning data
-
-```{r}
-library(jsonlite)
-library(tidyverse)
-library(lubridate)
-
-
-#redaing data from API
-
-url <- "https://data.iowa.gov/resource/m3tr-qhgy.json?county=STORY"
-story <- data.frame(fromJSON(url))
-
-#reading data from csv
-data <- readr::read_csv('data/Iowa_Liquor_Sales-Story.csv')
-names(data) <- stringr::str_replace_all(names(data),"\\s","") 
-names(data) <- stringr::str_replace_all(names(data),"[\\(\\)]","")
-names(data)
-head(data$StoreLocation)
-
-# clean data
-
-sub_data <- data %>%
-  select(StoreLocation,Date,VolumeSoldLiters,SaleDollars,CategoryName) %>%
-  separate(StoreLocation,c("address","citypluszip","coordinate"),"\\n",extra="merge") %>%
-  separate(citypluszip,c("city","zipcode")," (?=[^ ]+$)",extra="merge") %>%
-  mutate(coordinate=stringr::str_replace_all(coordinate,"[\\(\\)]","") ,
-         city=stringr::str_replace_all(stringr::str_to_lower(city),"\\s",""),
-         Date=lubridate::mdy(Date),
-         Year=lubridate::year(Date),
-         Month=lubridate::month(Date,label=TRUE,abbr=TRUE),
-         DayOfWeek=lubridate::wday(Date, label=TRUE),
-         CategoryName=stringr::str_to_lower(CategoryName)
-         ) %>%
-  separate(coordinate,c("lat","lon"),",") %>%
-  mutate_at(vars(city, zipcode, CategoryName, Year),factor)%>%
-  mutate_at(vars(lat, lon), as.numeric)
-unique(sub_data$zipcode)
-unique(sub_data$city)
-
-save(sub_data, file = "shiny_zahra/clean_data.rda")
-  
-```
 
 #### shiny app
 
@@ -191,22 +157,23 @@ ui <- fluidPage(
     # Sidebar panel for inputs ----
     sidebarPanel(
       
-      # Input: Slider for the number of bins ----
+      # Input: select year for plotting bar chart of alcohol consumption across Story County
       selectInput("Year", label = ("Select Year"),
                   choices = sort(unique(sub_data$Year)),
                   selected = 2012),
+      # Input: select city for plotting bar chart of alcohol consumption of a specific city from 2012 to 2019
       selectInput("city", label = ("Select city"),
                   choices = sort(unique(sub_data$city)),
                   selected = "ames")
       
     ),
     
-    # Main panel for displaying outputs ----
+    # Main panel for displaying three plot outputs 
     mainPanel(
       tabsetPanel(
         tabPanel("consumption by City in Year", plotOutput(outputId = "consplotyear")),
-        tabPanel("Consumption of City in different year",  plotOutput(outputId = "consplotcity")),
-        tabPanel("Spatial plot", leaflet::leafletOutput("map"))
+        tabPanel("Consumption of City in different year",  plotOutput(outputId = "consplotcity"))
+      
       )
       
        )
@@ -216,34 +183,34 @@ ui <- fluidPage(
 
 # Define server logic required to draw a histogram ----
 server <- function(input, output) {
-  
+  #filtering data in specific year
   liq_subset <- reactive({
     sub_data %>%
       filter(Year == input$Year)
   })
-  
+  #filtering data for specific city
   liqcity_subset <- reactive({
     sub_data %>%
       filter(city == input$city)
   })
-  
+  #plot the alcohol consumption in specific year across Story County 
   output$consplotyear <- renderPlot({
-    ggplot(data = liq_subset(), aes(x = city, y = VolumeSoldLiters))+
+    ggplot(data = liq_subset(), aes(x = city, y = VolumeSoldLiters,color=zipcode,group=zipcode))+
       geom_col()+
-      theme_bw()+
       ggtitle(paste("Total alcohol consumption in Story County in", input$Year))
 
     
   })
   
+  # plot the alcohol consumption in specific city from 2012 to 2019 color and group based on the day of week 
   output$consplotcity <- renderPlot({
-    ggplot(data = liqcity_subset(), aes(x = Year, y = VolumeSoldLiters))+
+    ggplot(data = liqcity_subset(), aes(x = Year, y = VolumeSoldLiters,color = DayOfWeek,group=DayOfWeek))+
       geom_col()+
-      theme_bw()+
-      ggtitle(paste("Total alcohol consumption of", input$city),"from 2012 to 2019")
+      ggtitle(paste("Total alcohol consumption of", input$city))
     
     
   })
+
   
 }
 
