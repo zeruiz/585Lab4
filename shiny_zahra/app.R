@@ -54,7 +54,7 @@ server <- function(input, output) {
   })
   
   output$consplotyear <- renderPlot({
-    ggplot(data = liq_subset(), aes(x = city, y = VolumeSoldLiters,color=zipcode,group=zipcode))+
+    ggplot(data = liq_subset(), aes(x = city, y = VolumeSoldLiters,fill=zipcode,group=zipcode))+
       geom_col()+
       ggtitle(paste("Total alcohol consumption in Story County in", input$Year))
 
@@ -62,7 +62,7 @@ server <- function(input, output) {
   })
   
   output$consplotcity <- renderPlot({
-    ggplot(data = liqcity_subset(), aes(x = Year, y = VolumeSoldLiters,color = DayOfWeek,group=DayOfWeek))+
+    ggplot(data = liqcity_subset(), aes(x = Year, y = VolumeSoldLiters,fill = DayOfWeek,group=DayOfWeek))+
       geom_col()+
       ggtitle(paste("Total alcohol consumption of", input$city))
     
