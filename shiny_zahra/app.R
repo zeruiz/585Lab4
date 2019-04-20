@@ -9,7 +9,7 @@ load(file = "clean_data.rda")
 ui <- fluidPage(
   
   # App title ----
-  titlePanel("Liquor Consumption in Story County!"),
+  titlePanel("Liquor volume purchase history in Story County!"),
   
   # Sidebar layout with input and output definitions ----
   sidebarLayout(
@@ -56,7 +56,7 @@ server <- function(input, output) {
   output$consplotyear <- renderPlot({
     ggplot(data = liq_subset(), aes(x = city, y = VolumeSoldLiters,fill=zipcode,group=zipcode))+
       geom_col()+
-      ggtitle(paste("Total alcohol consumption in Story County in", input$Year))
+      ggtitle(paste("Total alcohol volume sold in Liter in Story County in", input$Year))
 
     
   })
@@ -64,7 +64,7 @@ server <- function(input, output) {
   output$consplotcity <- renderPlot({
     ggplot(data = liqcity_subset(), aes(x = Year, y = VolumeSoldLiters,fill = DayOfWeek,group=DayOfWeek))+
       geom_col()+
-      ggtitle(paste("Total alcohol consumption of", input$city))
+      ggtitle(paste("Total alcohol volume sold in Liter", input$city))
     
     
   })

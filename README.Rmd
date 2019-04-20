@@ -132,7 +132,7 @@ shinyApp(ui, server)
 
 ```
 
-### 3. Wrking with Shiny : plot of alcohol consumption in a specific year across Story County + in specific city from 2012 to 2019(another version)
+### 3. Wrking with Shiny : plot of alcohol volume purchase history in a specific year across Story County + in specific city from 2012 to 2019(another version)
 
 
 #### shiny app
@@ -149,7 +149,7 @@ load(file = "clean_data.rda")
 ui <- fluidPage(
   
   # App title ----
-  titlePanel("Liquor Consumption in Story County!"),
+  titlePanel("Liquor volume purchase history in Story County!"),
   
   # Sidebar layout with input and output definitions ----
   sidebarLayout(
@@ -157,23 +157,21 @@ ui <- fluidPage(
     # Sidebar panel for inputs ----
     sidebarPanel(
       
-      # Input: select year for plotting bar chart of alcohol consumption across Story County
+      # Input: Slider for the number of bins ----
       selectInput("Year", label = ("Select Year"),
                   choices = sort(unique(sub_data$Year)),
                   selected = 2012),
-      # Input: select city for plotting bar chart of alcohol consumption of a specific city from 2012 to 2019
       selectInput("city", label = ("Select city"),
                   choices = sort(unique(sub_data$city)),
                   selected = "ames")
       
     ),
     
-    # Main panel for displaying three plot outputs 
+    # Main panel for displaying outputs ----
     mainPanel(
       tabsetPanel(
         tabPanel("consumption by City in Year", plotOutput(outputId = "consplotyear")),
         tabPanel("Consumption of City in different year",  plotOutput(outputId = "consplotcity"))
-      
       )
       
        )
@@ -183,35 +181,36 @@ ui <- fluidPage(
 
 # Define server logic required to draw a histogram ----
 server <- function(input, output) {
-  #filtering data in specific year
+  
   liq_subset <- reactive({
     sub_data %>%
       filter(Year == input$Year)
   })
-  #filtering data for specific city
+  
   liqcity_subset <- reactive({
     sub_data %>%
       filter(city == input$city)
   })
-  #plot the alcohol consumption in specific year across Story County 
+  
+  # group and color plot based on the zipcode
   output$consplotyear <- renderPlot({
-    ggplot(data = liq_subset(), aes(x = city, y = VolumeSoldLiters,color=zipcode,group=zipcode))+
+    ggplot(data = liq_subset(), aes(x = city, y = VolumeSoldLiters,fill=zipcode,group=zipcode))+
       geom_col()+
-      ggtitle(paste("Total alcohol consumption in Story County in", input$Year))
+      ggtitle(paste("Total alcohol volume sold in Liter in Story County in", input$Year))
 
     
   })
   
-  # plot the alcohol consumption in specific city from 2012 to 2019 color and group based on the day of week 
+  #group and color plot based on the day of week in every year
   output$consplotcity <- renderPlot({
-    ggplot(data = liqcity_subset(), aes(x = Year, y = VolumeSoldLiters,color = DayOfWeek,group=DayOfWeek))+
+    ggplot(data = liqcity_subset(), aes(x = Year, y = VolumeSoldLiters,fill = DayOfWeek,group=DayOfWeek))+
       geom_col()+
-      ggtitle(paste("Total alcohol consumption of", input$city))
+      ggtitle(paste("Total alcohol volume sold in Liter", input$city))
     
     
   })
-
   
+
 }
 
 shinyApp(ui = ui, server = server)
