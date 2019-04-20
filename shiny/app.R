@@ -2,6 +2,8 @@ library(shiny)
 require(ggplot2)
 require(dplyr)
 require(leaflet)
+require(plotly)
+
 
 # read in data
 load(file = "subdat.rda")
@@ -20,7 +22,8 @@ ui <- fluidPage(
     tabsetPanel(
       tabPanel("Total Sales", plotOutput(outputId = "sales")),
       tabPanel("Sales by City", plotOutput(outputId = "cities")),
-      tabPanel("Spatial plot", leaflet::leafletOutput("map"))
+      tabPanel("Store Location", leafletOutput("map1")),
+      tabPanel("Store Income heat map", plotlyOutput("map2"))
       )
     )
   )
@@ -56,10 +59,16 @@ server <- function(input, output){
       group_by(StoreName, Lon, Lat) %>% 
       summarise(income = sum(SaleDollars))
   })
-  output$map <- leaflet::renderLeaflet({
-    leaflet::leaflet(data = city_year()) %>% leaflet::addTiles() %>%
-      leaflet::addCircleMarkers(~Lon, ~Lat, label = ~ StoreName,
+  output$map1 <- renderLeaflet({
+    leaflet(data = city_year()) %>% 
+      addTiles() %>%
+      addCircleMarkers(~Lon, ~Lat, label = ~ StoreName,
                                 clusterOptions = markerClusterOptions())
+  })
+  output$map2 <- renderPlotly({
+    p <- ggplot(data = city_year(), aes(x = Lon, y = Lat, colour = income, size=StoreName)) + 
+      geom_point()+theme_bw()+theme(legend.position=c(0.8, 0.8))
+    ggplotly(p)
   })
 }
 
