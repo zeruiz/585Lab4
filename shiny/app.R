@@ -12,21 +12,23 @@ ui <- fluidPage(
   # App Title
   titlePanel("Story County Liquor Sales"),
   
-  # Sidebar #1 - date
-  sidebarPanel(
-      selectInput("Year", label = ("Year"),
+    sidebarPanel(
+        selectInput("Year", label = ("Year"),
                   choices = sort(unique(subdat$Year)),
-                  selected = 2012)
+                  selected = 2012),
+        selectInput("City", label = ("Select city"),
+                  choices = sort(unique(subdat$City)),
+                  selected = "ames")
     ),
-  mainPanel(
-    tabsetPanel(
-      tabPanel("Total Sales", plotOutput(outputId = "sales")),
-      tabPanel("Sales by City", plotOutput(outputId = "cities")),
-      tabPanel("Store Location", leafletOutput("map1")),
-      tabPanel("Store Income heat map", plotlyOutput("map2"))
-      )
+    mainPanel(
+      tabsetPanel(
+        tabPanel("Total Sales", plotOutput(outputId = "sales")),
+        tabPanel("Sales by City", plotOutput(outputId = "cities")),
+        tabPanel("Store Location", leafletOutput("map1")),
+        tabPanel("Store Income heat map", plotlyOutput("map2"))
+        )
     )
-  )
+)
 
 # server
 server <- function(input, output){
@@ -34,11 +36,9 @@ server <- function(input, output){
     subdat %>%
       filter(Year == input$Year)
   })
-  city_group <- reactive({
+  liq_city <- reactive({
     subdat %>%
-      filter(Year == input$Year)%>%
-      group_by(City, Month)%>%
-      summarize(totalSales = sum(SaleDollars))
+      filter(City == input$City)
   })
   output$sales <- renderPlot({
     ggplot(data = liq_subset(), aes(x = Month, y = SaleDollars))+
@@ -47,11 +47,10 @@ server <- function(input, output){
       ggtitle(paste("Total alcohol in Story County in", input$Year))
   })
   output$cities <- renderPlot({
-    ggplot(data = city_group(), aes(x = Month, y = totalSales, color = City, group = City))+
-      geom_point()+
-      geom_line()+
+    ggplot(data = liq_city(), aes(x = Year, y = SaleDollars, fill = DayOfWeek,group=DayOfWeek))+
+      geom_col()+
       theme_bw()+
-      ggtitle(paste("Total alochol sales by city in Story Count in", input$Year))
+      ggtitle(paste("Total alcohol sales in", input$City, "in Story Count across years"))
   })
   city_year <- reactive({
     subdat %>%
