@@ -1,4 +1,4 @@
-# 585Lab4
+# API and Shiny, 585 Lab4
 
 Here is the [link](https://github.com/zeruiz/585Lab4) to our github repo
 
